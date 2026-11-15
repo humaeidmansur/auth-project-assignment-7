@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Package } from "lucide-react";
 
 import type Product from "@/src/app/types/product";
 import ProductCard from "./ProductCard";
@@ -14,11 +13,14 @@ export default function ProductSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Fetch all products from API
   useEffect(() => {
     let isMounted = true;
 
     async function fetchProducts() {
       try {
+        setLoading(true);
+
         const response = await fetch(`${API_URL}/products`);
 
         if (!response.ok) {
@@ -41,7 +43,9 @@ export default function ProductSection() {
       } catch (err) {
         if (isMounted) {
           setError(
-            err instanceof Error ? err.message : "Something went wrong."
+            err instanceof Error
+              ? err.message
+              : "Something went wrong."
           );
         }
       } finally {
@@ -58,26 +62,43 @@ export default function ProductSection() {
     };
   }, []);
 
+  // Products with increased prices
+  
+  const increasedProducts = products
+    .filter((product) => product.change?.dir === "up")
+    .sort((a, b) => b.change.pct - a.change.pct)
+    .slice(0, 6);
+
+  // Products with decreased prices
+
+  const decreasedProducts = products
+    .filter((product) => product.change?.dir === "down")
+    .sort((a, b) => b.change.pct - a.change.pct)
+    .slice(0, 6);
+
+  // Loading state
   if (loading) {
     return (
       <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        {[1, 2].map((section) => (
-          <div key={section}>
+        {[1, 2, 3].map((section) => (
+          <section key={section}>
             <div className="mb-4 h-6 w-48 animate-pulse rounded bg-gray-200" />
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3, 4, 5, 6].map((card) => (
+              {Array.from({ length: 6 }).map((_, index) => (
                 <div
-                  key={card}
+                  key={index}
                   className="h-28 animate-pulse rounded-2xl bg-white"
                 />
               ))}
             </div>
-          </div>
+          </section>
         ))}
       </main>
     );
   }
 
+  // Error state
   if (error) {
     return (
       <p className="mx-auto max-w-7xl px-4 py-8 text-red-600">
@@ -86,22 +107,15 @@ export default function ProductSection() {
     );
   }
 
-  const increasedProducts = products
-    .filter((product) => product.change?.dir === "up")
-    .sort((a, b) => b.change.pct - a.change.pct)
-    .slice(0, 6);
-
-  const decreasedProducts = products
-    .filter((product) => product.change?.dir === "down")
-    .sort((a, b) => b.change.pct - a.change.pct)
-    .slice(0, 6);
-
   return (
     <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-      {/* Price Increased Section */}
+
+      {/* SECTION 1: PRICE INCREASED */}
+
       <section>
         <div className="mb-4 flex items-center gap-2">
           <TrendingUp size={20} className="text-red-600" />
+
           <h2 className="text-xl font-bold text-gray-800">
             Price Increased
           </h2>
@@ -120,10 +134,12 @@ export default function ProductSection() {
         )}
       </section>
 
-      {/* Price Decreased Section */}
+      {/* SECTION 2: PRICE DECREASED */}
+
       <section>
         <div className="mb-4 flex items-center gap-2">
           <TrendingDown size={20} className="text-green-600" />
+
           <h2 className="text-xl font-bold text-gray-800">
             Price Decreased
           </h2>
@@ -141,6 +157,44 @@ export default function ProductSection() {
           </p>
         )}
       </section>
+
+      {/* SECTION 3: ALL PRODUCTS */}
+
+      <section id="all-products">
+
+ 
+        <div className="mb-4 flex items-center gap-2">
+          <Package size={20} className="text-green-700" />
+
+          <h2 className="text-xl font-bold text-gray-800">
+            All Products
+          </h2>
+        </div>
+
+        {/* Total Product Count */}
+
+        <p className="mb-4 text-sm text-gray-500">
+          Showing {products.length} products
+        </p>
+
+        {/* All Product Cards */}
+
+        {products.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
+            <p className="text-gray-500">
+              No products available at the moment.
+            </p>
+          </div>
+        )}
+
+      </section>
+
     </main>
   );
 }
