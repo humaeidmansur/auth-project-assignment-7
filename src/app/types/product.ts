@@ -2,21 +2,22 @@ export interface MarketPrice {
   name: string;
   price: number;
 }
-
-export interface Product {
+export default interface Product {
   id: number;
   slug: string;
-  name: string;
-  emoji: string;
-
+  nameBn: string;
   category: string;
-  categorySlug: string;
-
+  categoryNameBn: string;
+  categoryIcon: string;
+  image: string;
   unit: string;
-  description: string;
+  today: number;
+  yesterday: number;
+  lastWeek: number;
+  lastMonth: number;
 
-  price: number;
-  previousPrice: number;
-
-  markets: MarketPrice[];
+  change: {
+    dir: "up" | "down" | "flat";
+    pct: number;
+  };
 }
