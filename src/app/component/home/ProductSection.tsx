@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Spinner } from "@heroui/react";
 import { TrendingUp, TrendingDown, Package } from "lucide-react";
 
 import type Product from "@/src/app/types/product";
@@ -8,20 +9,36 @@ import ProductCard from "./ProductCard";
 
 const API_URL = "https://openapi.programming-hero.com/api/bazardor";
 
+// Calculate percentage change using actual prices
+function getChangePercent(product: Product): number {
+  if (product.yesterday <= 0) {
+    return 0;
+  }
+
+  return Math.abs(
+    ((product.today - product.yesterday) / product.yesterday) * 100
+  );
+}
+
 export default function ProductSection() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
 
   // Fetch all products from API
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
 
     async function fetchProducts() {
       try {
         setLoading(true);
+        setError("");
 
-        const response = await fetch(`${API_URL}/products`);
+        const response = await fetch(`${API_URL}/products`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch products.");
@@ -31,25 +48,28 @@ export default function ProductSection() {
 
         const productList: Product[] = Array.isArray(result)
           ? result
-          : result.data ?? result.products ?? [];
+          : result.data?.products ??
+            result.data ??
+            result.products ??
+            [];
 
         if (!Array.isArray(productList)) {
           throw new Error("Invalid product data.");
         }
 
-        if (isMounted) {
-          setProducts(productList);
-        }
+        setProducts(productList);
       } catch (err) {
-        if (isMounted) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Something went wrong."
-          );
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
         }
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Something went wrong."
+        );
       } finally {
-        if (isMounted) {
+        if (!controller.signal.aborted) {
           setLoading(false);
         }
       }
@@ -58,52 +78,73 @@ export default function ProductSection() {
     fetchProducts();
 
     return () => {
-      isMounted = false;
+      controller.abort();
     };
-  }, []);
+  }, [retry]);
 
-  // Products with increased prices
-  
+  // Price Increased
   const increasedProducts = products
-    .filter((product) => product.change?.dir === "up")
-    .sort((a, b) => b.change.pct - a.change.pct)
+    .filter((product) => product.today > product.yesterday)
+    .sort((a, b) => getChangePercent(b) - getChangePercent(a))
     .slice(0, 6);
 
-  // Products with decreased prices
-
+  // Price Decreased
   const decreasedProducts = products
-    .filter((product) => product.change?.dir === "down")
-    .sort((a, b) => b.change.pct - a.change.pct)
+    .filter((product) => product.today < product.yesterday)
+    .sort((a, b) => getChangePercent(b) - getChangePercent(a))
     .slice(0, 6);
 
-  // Loading state
+  // Loading State
   if (loading) {
     return (
-      <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        {[1, 2, 3].map((section) => (
-          <section key={section}>
-            <div className="mb-4 h-6 w-48 animate-pulse rounded bg-gray-200" />
+      <main className="flex min-h-80 items-center justify-center px-4 py-12">
+        <div className="flex flex-col items-center gap-3">
+          <Spinner color="success" size="lg" />
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="h-28 animate-pulse rounded-2xl bg-white"
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+          <p className="text-sm text-gray-600">
+            Loading product information...
+          </p>
+        </div>
       </main>
     );
   }
 
-  // Error state
+  // Error State
   if (error) {
     return (
-      <p className="mx-auto max-w-7xl px-4 py-8 text-red-600">
-        {error}
-      </p>
+      <main className="mx-auto max-w-7xl px-4 py-12 text-center">
+        <p className="text-sm text-red-600">{error}</p>
+
+        <button
+          onClick={() => setRetry((previous) => previous + 1)}
+          className="mt-4 rounded-lg bg-green-700 px-5 py-2 text-sm font-semibold text-white transition hover:bg-green-800"
+        >
+          Try Again
+        </button>
+      </main>
+    );
+  }
+
+  // Empty State
+  if (products.length === 0) {
+    return (
+      <main
+        id="all-products"
+        className="mx-auto max-w-7xl px-4 py-12 text-center"
+      >
+        <Package size={32} className="mx-auto mb-3 text-gray-400" />
+
+        <p className="text-gray-500">
+          No products available at the moment.
+        </p>
+
+        <button
+          onClick={() => setRetry((previous) => previous + 1)}
+          className="mt-4 rounded-lg bg-green-700 px-5 py-2 text-sm font-semibold text-white hover:bg-green-800"
+        >
+          Try Again
+        </button>
+      </main>
     );
   }
 
@@ -111,10 +152,9 @@ export default function ProductSection() {
     <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
 
       {/* SECTION 1: PRICE INCREASED */}
-
       <section>
         <div className="mb-4 flex items-center gap-2">
-          <TrendingUp size={20} className="text-red-600" />
+          <TrendingUp size={20} className="text-green-600" />
 
           <h2 className="text-xl font-bold text-gray-800">
             Price Increased
@@ -135,10 +175,9 @@ export default function ProductSection() {
       </section>
 
       {/* SECTION 2: PRICE DECREASED */}
-
       <section>
         <div className="mb-4 flex items-center gap-2">
-          <TrendingDown size={20} className="text-green-600" />
+          <TrendingDown size={20} className="text-red-600" />
 
           <h2 className="text-xl font-bold text-gray-800">
             Price Decreased
@@ -159,10 +198,10 @@ export default function ProductSection() {
       </section>
 
       {/* SECTION 3: ALL PRODUCTS */}
-
-      <section id="all-products">
-
- 
+      <section
+        id="all-products"
+        className="scroll-mt-24"
+      >
         <div className="mb-4 flex items-center gap-2">
           <Package size={20} className="text-green-700" />
 
@@ -172,29 +211,17 @@ export default function ProductSection() {
         </div>
 
         {/* Total Product Count */}
-
         <p className="mb-4 text-sm text-gray-500">
           Showing {products.length} products
         </p>
 
         {/* All Product Cards */}
-
-        {products.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-            <p className="text-gray-500">
-              No products available at the moment.
-            </p>
-          </div>
-        )}
-
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
       </section>
-
     </main>
   );
 }

@@ -55,6 +55,7 @@ export default function Navbar() {
               BazarDor
             </h1>
 
+            {/* Bangla Date */}
             <Suspense fallback={<span>&nbsp;</span>}>
               <BanglaDate />
             </Suspense>
@@ -81,7 +82,7 @@ export default function Navbar() {
                     </span>
                   </Link>
 
-                  {/* Sign Out Button */}
+                  {/* Sign Out */}
                   <button
                     onClick={handleSignOut}
                     className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-100 sm:gap-2 sm:px-4 sm:text-sm"
@@ -120,7 +121,13 @@ export default function Navbar() {
       </div>
 
       {/* Category Navigation */}
-      <CategoryNav />
+      <Suspense
+        fallback={
+          <div className="h-10 border-t border-gray-100 bg-white" />
+        }
+      >
+        <CategoryNav />
+      </Suspense>
 
       {/* Price Ticker */}
       <PriceTicker />

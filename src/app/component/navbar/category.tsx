@@ -3,104 +3,102 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getCategories } from "@/src/app/lib/api";
 import {Spinner} from "@heroui/react";
+import type Product from "@/src/app/types/product";
 
-type Category = {
-  id: string;
+const API_URL = "https://openapi.programming-hero.com/api/bazardor";
+
+interface Category {
   slug: string;
-  nameBn: string;
+  name: string;
   icon: string;
-};
-
-const categoryNames: Record<string, string> = {
-  chal: "Rice",
-  dal: "Lentils",
-  tel: "Oil",
-  sobji: "Vegetables",
-  mach: "Fish",
-};
+}
 
 export default function CategoryNav() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+
   const pathname = usePathname();
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    let isMounted = true;
+
+    async function fetchCategories() {
       try {
-        const data = await getCategories();
-        setCategories(data);
+        // Fetch products and derive categories from their data.
+        const response = await fetch(`${API_URL}/products`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch categories.");
+        }
+
+        const result = await response.json();
+
+        const products: Product[] = Array.isArray(result)
+          ? result
+          : result.data ?? result.products ?? [];
+
+        // Get unique categories.
+        const uniqueCategories = Array.from(
+          new Map(
+            products.map((product) => [
+              product.category,
+              {
+                slug: product.category,
+                name: product.categoryNameBn,
+                icon: product.categoryIcon,
+              },
+            ])
+          ).values()
+        );
+
+        if (isMounted) {
+          setCategories(uniqueCategories);
+        }
       } catch (error) {
-        console.error("Failed to load categories:", error);
+        console.error("Category loading error:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    };
+    }
 
     fetchCategories();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  if (loading) {
-  return (
-    <div className="flex justify-center items-center gap-8 text-center py-4">
-      <div className="flex flex-col items-center gap-2">
-        <Spinner color="current" />
-         
-      </div>
-      <div className="flex flex-col items-center gap-2">
-        <Spinner color="accent" />
-        
-      </div>
-      <div className="flex flex-col items-center gap-2">
-        <Spinner color="success" />
-       
-      </div>
-      <div className="flex flex-col items-center gap-2">
-        <Spinner color="warning" />
-        
-      </div>
-      <div className="flex flex-col items-center gap-2">
-        <Spinner color="danger" />
-       
-      </div>
-    </div>
-  );
-}
+  const isActive = (slug: string) =>
+    pathname === `/category/${slug}`;
 
   return (
-    <nav className="flex flex-wrap items-center justify-center gap-6 border-b bg-white px-4 py-3">
-      <Link
-        href="/"
-        className={`font-medium ${
-          pathname === "/" ? "text-green-700" : "text-gray-600"
-        }`}
-      >
-        All Products
-      </Link>
+    <nav className="border-t border-gray-100 bg-white">
+      <div className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-3 py-2 sm:px-6">
+ 
 
-      {categories.map((category) => {
-        const isActive = pathname === `/category/${category.slug}`;
+        {loading ? (
+          <Spinner color="success" />
+        ) : (
+          categories.map((category) => (
+            <Link
+              key={category.slug}
+              href={`/category/${category.slug}`}
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                isActive(category.slug)
+                  ? "bg-green-700 text-white"
+                  : "text-gray-700 hover:bg-green-50"
+              }`}
+            >
+              <span>{category.icon}</span>
+              <span>{category.name}</span>
+            </Link>
+          ))
+        )}
 
-        return (
-          <Link
-            key={category.id}
-            href={`/category/${category.slug}`}
-            className={`flex items-center gap-2 font-medium transition-colors ${
-              isActive
-                ? "text-green-700"
-                : "text-gray-600 hover:text-green-700"
-            }`}
-          >
-            <span>{category.icon}</span>
-            <span>
-              {categoryNames[category.slug] ||
-                category.slug.charAt(0).toUpperCase() +
-                  category.slug.slice(1)}
-            </span>
-          </Link>
-        );
-      })}
+      </div>
     </nav>
   );
 }
