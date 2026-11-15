@@ -11,6 +11,7 @@ export default interface Product {
   categoryIcon: string;
   image: string;
   unit: string;
+
   today: number;
   yesterday: number;
   lastWeek: number;
