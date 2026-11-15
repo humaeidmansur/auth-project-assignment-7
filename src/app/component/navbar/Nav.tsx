@@ -9,6 +9,8 @@ import CategoryNav from "./category";
 import PriceTicker from "./PriceTicker";
 
 // Bangla Date Component
+// I made it separately because it uses the `toLocaleDateString` method which is not supported in server components.
+
 function BanglaDate() {
   const today = new Date().toLocaleDateString("bn-BD", {
     day: "numeric",

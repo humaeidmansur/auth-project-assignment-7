@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getCategories } from "@/src/app/lib/api";
+import {Spinner} from "@heroui/react";
 
 type Category = {
   id: string;
@@ -41,8 +42,31 @@ export default function CategoryNav() {
   }, []);
 
   if (loading) {
-    return <div className="py-4 text-center">Loading categories...</div>;
-  }
+  return (
+    <div className="flex justify-center items-center gap-8 text-center py-4">
+      <div className="flex flex-col items-center gap-2">
+        <Spinner color="current" />
+         
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <Spinner color="accent" />
+        
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <Spinner color="success" />
+       
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <Spinner color="warning" />
+        
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <Spinner color="danger" />
+       
+      </div>
+    </div>
+  );
+}
 
   return (
     <nav className="flex flex-wrap items-center justify-center gap-6 border-b bg-white px-4 py-3">
